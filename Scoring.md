@@ -1,6 +1,6 @@
 # Scoring
 
-Swap with another pair.
+Swap with a pair in the other group.
 
 Give a mark out of ten for each of:
  * Completeness (Use cases implemented - even if problems)
