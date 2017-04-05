@@ -25,7 +25,7 @@ namespace StringCalculator
         private static int CustomDelimiters(string numbers)
         {
             string firstLineText = numbers.Split('\n').First();
-            string delimiter = firstLineText.Substring(2, firstLineText.Length - 3);
+            string delimiter = firstLineText.Substring(2, firstLineText.Length - 2);
             if (delimiter == string.Empty) // Delimiter is a \n
             {
                 string restOfText = string.Join("\n", numbers.Split('\n').Skip(1));
@@ -34,12 +34,12 @@ namespace StringCalculator
             else
             {
                 string restOfText = numbers.Split('\n').Skip(1).Single();
-
+                
                 if (firstLineText.Contains("["))
                 {
-                    string[] delimiters = firstLineText
-                        .Split(']')
-                        .Select(txt => txt.Substring(1, txt.Length - 2))
+                    string[] delimiters = delimiter
+                        .Split(new [] { ']'}, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(txt => txt.Substring(1, txt.Length - 1))
                         .ToArray()
                         ;
 
