@@ -1,11 +1,12 @@
-import org.junit.jupiter.api.*;
-
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.IntPredicate;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * http://osherove.com/tdd-kata-1/
@@ -20,9 +21,21 @@ class StringCalculatorTest {
         nonDigitCodePoints = IntStream.rangeClosed(0, 255).filter(nonDigits);
     }
 
-    @Test
-    void whenInputStringIsEmpty_thenReturn0() throws Exception {
-        assertStringSum(0, "");
+    @TestFactory
+    Stream<DynamicTest> whenPresentedWithCommaSeparatedValues_thenReturnSumofValues() throws Exception {
+        Map<String, Integer> expectedList = new HashMap<>();
+        expectedList.put("", 0);
+        expectedList.put("1", 1);
+        expectedList.put("1,2", 3);
+        expectedList.put("1,2,3,4", 10);
+        expectedList.put("1,2,3,4,5", 15);
+        expectedList.put("11,20,33,4,400", 468);
+        return expectedList.keySet().stream().map(key -> dynamicTest(key, expectedList.get(key)));
+    }
+
+    DynamicTest dynamicTest(String str, int expected) {
+        return DynamicTest.dynamicTest("Test that" + str + " returns: " + expected,
+                () -> assertStringSum(expected, str));
     }
 
     @Test
@@ -37,23 +50,8 @@ class StringCalculatorTest {
     }
 
     @Test
-    void whenOnlyOneInt_thenSumIsEqualToThatInt() {
-        assertStringSum(1, "1");
-        assertStringSum(123, "123");
-    }
-
-    @Nested
-    class WhenUsingDefaultDelimiter {
-
-        @Test
-        void supportCommaSeperatedValues() {
-            assertStringSum(10, "1,2,3,4");
-        }
-
-        @Test
-        void supportNewLinesBetweenNumbers() {
-            assertStringSum(15, "1\n2,3\n4,5");
-        }
+    void whenNewLinesAreBetweenNumbers_thenTreatAsDelimiter() {
+        assertStringSum(15, "1\n2,3\n4,5");
     }
 
     @Nested
@@ -115,7 +113,7 @@ class StringCalculatorTest {
             int[] nonDigitCodePointsArr = nonDigitCodePoints.toArray();
             Stream.Builder<DynamicTest> testStreamBuilder = Stream.builder();
             for (int i = 0, j = nonDigitCodePointsArr.length - 1; i < nonDigitCodePointsArr.length; i++, j--) {
-                testStreamBuilder.accept(getDynamicTestForTwoDelimiters(nonDigitCodePointsArr[i], nonDigitCodePointsArr[j],3));
+                testStreamBuilder.accept(getDynamicTestForTwoDelimiters(nonDigitCodePointsArr[i], nonDigitCodePointsArr[j], 3));
             }
             return testStreamBuilder.build();
         }

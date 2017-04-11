@@ -1,95 +1,43 @@
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.regex.*;
 import static java.util.stream.Collectors.joining;
 
 class StringCalculator {
-    private static final String DEFAULT_DELIMITER = ",";
-    private static final List<Character> CHARS_TO_ESCAPE = Arrays.asList('$', '(', ')', '*', '+', '.', '?', '[', '\\', '^', '{', '|');
+    private static final String CHARS_TO_ESCAPE ="$()*+.?[\\^{|";
 
     static int add(String inputString) {
-        return inputString.isEmpty() ? 0 : computeSumOfIntsInString(getDataAndDelimiterSeparator(inputString));
-    }
+        final Matcher matcher = Pattern.compile("(//(\\D+)\n)?(.*)", Pattern.DOTALL).matcher(inputString);
+        final String delimiter = getDelimiterSection(matcher);
+        final String data = matcher.group(matcher.groupCount());
 
-    private static int computeSumOfIntsInString(DataAndDelimiterSeparator model) {
-        return Arrays.stream(model.getData().split("(" + model.getDelimiter() + "|\n)"))
-                .mapToInt(StringCalculator::validatedParseInt)
+        return Arrays.stream(data.split("(" + delimiter + "|\n)"))
+                .filter(s -> !s.isEmpty())
+                .mapToInt(Integer::parseInt)
+                .filter(num -> num <= 1000)
+                .peek(num -> {if (num < 0) throw new IllegalArgumentException("Negatives not allowed");})
                 .sum();
     }
 
-    private static int validatedParseInt(String numStr) {
-        int parsedIntValue = Integer.parseInt(numStr);
-        if (parsedIntValue < 0)
-            throw new RuntimeException("Negatives not allowed");
-        return (parsedIntValue > 1000) ? 0 : parsedIntValue;
+    private static String getDelimiterSection(Matcher matcher) {
+        return (matcher.matches() && matcher.group(2) != null)
+                ? getListOfDelimiters(matcher.group(2)).stream().collect(joining("|"))
+                : ",";
     }
 
-    private static DataAndDelimiterSeparator getDataAndDelimiterSeparator(String inputString) {
-        return hasVariableLengthDelimiter(inputString)
-                ? new VariableLengthDelimiterSeparator(inputString)
-                : new OneCharDelimiterSeparator(inputString);
-    }
-
-    private static boolean hasVariableLengthDelimiter(String input) {
-        return input.startsWith(VariableLengthDelimiterSeparator.DELIM_START) && input.contains(VariableLengthDelimiterSeparator.DELIM_END);
+    private static List<String> getListOfDelimiters(String delimiterSection) {
+        List<String> delimiterList = new ArrayList<>();
+        Matcher m = Pattern.compile("\\[(\\D+?)\\]").matcher(delimiterSection);
+        while (m.find())
+            delimiterList.add(escapeDelimiter(m.group(1)));
+        if (delimiterList.isEmpty())
+            delimiterList.add(escapeDelimiter(delimiterSection));
+        return delimiterList;
     }
 
     private static String escapeDelimiter(String delimiterIn) {
-        return delimiterIn.chars()
-                .mapToObj(intChar -> (char) intChar)
+        return delimiterIn.codePoints()
+                .mapToObj(codePoint -> String.valueOf(Character.toChars(codePoint)))
                 .map(character -> (CHARS_TO_ESCAPE.contains(character) ? "\\" : "") + character)
                 .collect(joining());
-    }
-
-    private static abstract class DataAndDelimiterSeparator {
-        String data = "";
-        String delimiter = DEFAULT_DELIMITER;
-
-        String getDelimiter() {
-            return delimiter;
-        }
-
-        String getData() {
-            return data;
-        }
-    }
-
-    private static class VariableLengthDelimiterSeparator extends DataAndDelimiterSeparator {
-        private static final String DELIM_START = "//[";
-        private static final String DELIM_END = "]\n";
-        private static final String DELIM_SEPARATOR = "][";
-
-        VariableLengthDelimiterSeparator(String input) {
-            int endOfDelimiterPos = input.indexOf(DELIM_END);
-            data = input.substring(endOfDelimiterPos + DELIM_END.length());
-            delimiter = processDelimiterSection(input.substring(DELIM_START.length(), endOfDelimiterPos));
-        }
-
-        private String processDelimiterSection(String delimiterStr) {
-            return delimiterStr.contains(DELIM_SEPARATOR) ? escapeMultipleDelimiters(delimiterStr) : escapeDelimiter(delimiterStr);
-        }
-
-        private String escapeMultipleDelimiters(String inputString) {
-            return Arrays.stream(inputString.split(escapeDelimiter(DELIM_SEPARATOR)))
-                    .map(StringCalculator::escapeDelimiter)
-                    .collect(joining("|"));
-        }
-    }
-
-    private static class OneCharDelimiterSeparator extends DataAndDelimiterSeparator {
-        private static final String DELIM_START = "//";
-        private static final String DELIM_END = "\n";
-
-        OneCharDelimiterSeparator(String inputString) {
-            if (hasCustomOneCharDelimiter(inputString)) {
-                delimiter = escapeDelimiter(inputString.substring(2, 3));
-                data = inputString.substring(4);
-            } else {
-                data = inputString;
-            }
-        }
-
-        private boolean hasCustomOneCharDelimiter(String s) {
-            return s.startsWith(OneCharDelimiterSeparator.DELIM_START) && s.substring(3, 4).equals(OneCharDelimiterSeparator.DELIM_END);
-        }
     }
 }
